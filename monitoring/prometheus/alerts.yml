@@ -1,0 +1,11 @@
+groups:
+  - name: springboot-alerts
+    rules:
+      - alert: ApplicationDown
+        expr: up{job="springboot-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spring Boot application is DOWN"
+          description: "The application has not responded for more than 1 minute."
