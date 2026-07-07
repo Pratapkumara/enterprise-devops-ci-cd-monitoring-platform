@@ -4,8 +4,10 @@ pipeline {
 
 
     tools {
+
         maven 'maven3'
         jdk 'JDK21'
+
     }
 
 
@@ -19,7 +21,10 @@ pipeline {
         SONAR_PROJECT_NAME = "devops-app"
 
         PORT = "8081"
+
+        SCANNER_HOME = tool 'sonar-scanner'
     }
+
 
 
     stages {
@@ -32,6 +37,7 @@ pipeline {
                 echo "Checking out source code"
 
                 checkout scm
+
             }
         }
 
@@ -47,12 +53,15 @@ pipeline {
 
                     echo "Building Spring Boot Application"
 
+
                     mvn clean package -DskipTests
 
 
                     echo "Checking Jar File"
 
+
                     ls -lh target/*.jar
+
 
                     '''
                 }
@@ -61,20 +70,26 @@ pipeline {
 
 
 
+
+
         stage('SonarQube Analysis') {
+
 
             steps {
 
+
                 dir('app') {
 
+
                     withSonarQubeEnv('sonar-server') {
+
 
                         sh '''
 
                         echo "Running SonarQube Scan"
 
 
-                        sonar-scanner \
+                        ${SCANNER_HOME}/bin/sonar-scanner \
                         -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                         -Dsonar.projectName=${SONAR_PROJECT_NAME} \
                         -Dsonar.sources=src \
@@ -90,26 +105,38 @@ pipeline {
 
 
 
+
         stage('Quality Gate') {
+
 
             steps {
 
+
                 timeout(time: 15, unit: 'MINUTES') {
+
 
                     waitForQualityGate abortPipeline: true
 
+
                 }
+
             }
+
         }
+
+
 
 
 
 
         stage('Docker Build') {
 
+
             steps {
 
+
                 dir('app') {
+
 
                     sh '''
 
@@ -122,6 +149,7 @@ pipeline {
 
                     docker images ${IMAGE_NAME}
 
+
                     '''
                 }
             }
@@ -130,9 +158,14 @@ pipeline {
 
 
 
+
+
+
         stage('Trivy Security Scan') {
 
+
             steps {
+
 
                 sh '''
 
@@ -152,9 +185,14 @@ pipeline {
 
 
 
+
+
+
         stage('Deploy Application') {
 
+
             steps {
+
 
                 sh '''
 
@@ -163,7 +201,9 @@ pipeline {
 
                 docker stop ${CONTAINER_NAME} || true
 
+
                 docker rm ${CONTAINER_NAME} || true
+
 
 
                 docker run -d \
@@ -173,30 +213,36 @@ pipeline {
 
 
 
-                echo "Application Running"
+                echo "Application Started"
+
 
                 docker ps
+
 
                 '''
             }
         }
 
+
     }
+
+
 
 
 
     post {
 
+
         success {
 
-            echo "🚀 Pipeline Completed Successfully"
+            echo "🚀 CI/CD Pipeline Completed Successfully"
 
         }
 
 
         failure {
 
-            echo "❌ Pipeline Failed"
+            echo "❌ CI/CD Pipeline Failed"
 
         }
 
