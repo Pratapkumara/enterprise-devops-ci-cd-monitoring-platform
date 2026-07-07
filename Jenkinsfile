@@ -137,6 +137,7 @@ pipeline {
                 docker rm -f springboot-app || true
 
 
+
                 echo "Starting new container..."
 
                 docker run -d \
@@ -147,41 +148,50 @@ pipeline {
 
 
 
-                echo "Checking container status..."
+                echo "Checking container..."
 
-                sleep 5
+                sleep 10
+
 
                 docker ps | grep springboot-app || {
-                    echo "Container failed to start"
+
+                    echo "Container failed"
+
                     docker logs springboot-app
+
                     exit 1
+
                 }
 
 
 
-                echo "Waiting for Application Startup..."
+                echo "Application Health Check..."
 
                 for i in {1..12}
+
                 do
 
-                    if curl -f http://localhost:8081
+                    if docker exec springboot-app curl -f http://localhost:8080/actuator/health
+
                     then
 
-                        echo "Application is UP ✅"
+                        echo "Application is UP 🚀"
+
                         exit 0
 
                     fi
 
 
-                    echo "Waiting... attempt $i/12"
+                    echo "Waiting for Spring Boot startup... attempt $i/12"
 
                     sleep 5
+
 
                 done
 
 
 
-                echo "Application failed to start ❌"
+                echo "Application failed ❌"
 
                 docker logs springboot-app
 
@@ -189,7 +199,9 @@ pipeline {
 
 
                 '''
+
             }
+
         }
 
 
