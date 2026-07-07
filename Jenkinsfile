@@ -2,20 +2,23 @@ pipeline {
 
     agent any
 
+
     tools {
-        maven 'Maven'
+        maven 'maven3'
         jdk 'JDK21'
     }
 
+
     environment {
 
-        APP_NAME = "devops-app"
         IMAGE_NAME = "devops-app"
+        IMAGE_TAG = "1.2"
         CONTAINER_NAME = "devops-app-container"
-        PORT = "8081"
 
         SONAR_PROJECT_KEY = "devops-app"
         SONAR_PROJECT_NAME = "devops-app"
+
+        PORT = "8081"
     }
 
 
@@ -23,7 +26,9 @@ pipeline {
 
 
         stage('Checkout Code') {
+
             steps {
+
                 echo "Checking out source code"
 
                 checkout scm
@@ -31,19 +36,24 @@ pipeline {
         }
 
 
+
         stage('Build Maven') {
+
             steps {
 
                 dir('app') {
 
                     sh '''
+
                     echo "Building Spring Boot Application"
 
                     mvn clean package -DskipTests
 
-                    echo "Checking Jar"
+
+                    echo "Checking Jar File"
 
                     ls -lh target/*.jar
+
                     '''
                 }
             }
@@ -79,6 +89,7 @@ pipeline {
 
 
 
+
         stage('Quality Gate') {
 
             steps {
@@ -90,6 +101,7 @@ pipeline {
                 }
             }
         }
+
 
 
 
@@ -105,11 +117,10 @@ pipeline {
 
 
                     docker build \
-                    -t ${IMAGE_NAME}:latest .
+                    -t ${IMAGE_NAME}:${IMAGE_TAG} .
 
 
                     docker images ${IMAGE_NAME}
-
 
                     '''
                 }
@@ -125,13 +136,13 @@ pipeline {
 
                 sh '''
 
-                echo "Running Trivy Scan"
+                echo "Running Trivy Security Scan"
 
 
                 trivy image \
                 --severity HIGH,CRITICAL \
                 --exit-code 0 \
-                ${IMAGE_NAME}:latest
+                ${IMAGE_NAME}:${IMAGE_TAG}
 
 
                 '''
@@ -158,20 +169,17 @@ pipeline {
                 docker run -d \
                 --name ${CONTAINER_NAME} \
                 -p ${PORT}:8080 \
-                ${IMAGE_NAME}:latest
+                ${IMAGE_NAME}:${IMAGE_TAG}
 
 
 
-                echo "Application Deployed"
-
+                echo "Application Running"
 
                 docker ps
-
 
                 '''
             }
         }
-
 
     }
 
@@ -181,14 +189,14 @@ pipeline {
 
         success {
 
-            echo "Pipeline Completed Successfully 🚀"
+            echo "🚀 Pipeline Completed Successfully"
 
         }
 
 
         failure {
 
-            echo "Pipeline Failed ❌"
+            echo "❌ Pipeline Failed"
 
         }
 
