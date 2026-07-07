@@ -61,7 +61,7 @@ pipeline {
 
                 dir('app') {
 
-                    withSonarQubeEnv('SonarQube') {
+                    withSonarQubeEnv('Sonar-Qube') {
 
                         sh '''
 
