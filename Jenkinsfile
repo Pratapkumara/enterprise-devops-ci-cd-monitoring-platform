@@ -30,7 +30,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 dir('app') {
-                    withSonarQubeEnv('sonarqube') {
+                    withSonarQubeEnv('sonar-server') {
                         sh """
                         ${SCANNER_HOME}/bin/sonar-scanner \
                         -Dsonar.projectKey=devops-app \
@@ -73,6 +73,7 @@ pipeline {
             steps {
                 sh '''
                 docker rm -f springboot-app || true
+
                 docker run -d \
                 --name springboot-app \
                 -p 8081:8080 \
@@ -83,8 +84,9 @@ pipeline {
     }
 
     post {
+
         success {
-            echo '✅ Build Successful'
+            echo '✅ Build Successful - CI/CD Completed'
         }
 
         failure {
