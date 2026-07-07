@@ -1,19 +1,18 @@
-```groovy
 pipeline {
 
     agent any
 
     tools {
-        maven 'maven3'
         jdk 'jdk21'
+        maven 'maven3'
     }
 
     environment {
 
         IMAGE_NAME = "devops-app"
-        IMAGE_TAG  = "1.0"
-
+        IMAGE_TAG = "1.0"
         SCANNER_HOME = tool 'sonar-scanner'
+
     }
 
 
@@ -38,11 +37,11 @@ pipeline {
                 dir('app') {
 
                     sh '''
-                    echo "Building Spring Boot Application"
+                    echo "Building Application"
 
                     mvn clean package -DskipTests
 
-                    echo "Checking JAR file"
+                    echo "Checking Jar"
 
                     ls -lh target/*.jar
                     '''
@@ -52,6 +51,7 @@ pipeline {
             }
 
         }
+
 
 
 
@@ -84,6 +84,7 @@ pipeline {
 
 
 
+
         stage('Quality Gate') {
 
             steps {
@@ -102,7 +103,7 @@ pipeline {
 
 
 
-        stage('Build Docker Image') {
+        stage('Docker Build') {
 
             steps {
 
@@ -129,20 +130,19 @@ pipeline {
 
 
 
-        stage('Trivy Image Scan') {
+        stage('Trivy Scan') {
 
             steps {
 
                 sh '''
 
-                echo "Scanning Docker Image"
+                echo "Security Scan"
 
                 trivy image \
                 --no-progress \
                 --severity HIGH,CRITICAL \
                 --exit-code 1 \
                 ${IMAGE_NAME}:${IMAGE_TAG}
-
 
                 '''
 
@@ -166,7 +166,8 @@ pipeline {
 
 
 
-                echo "Starting new container"
+                echo "Starting Application"
+
 
 
                 docker run -d \
@@ -176,8 +177,6 @@ pipeline {
                 ${IMAGE_NAME}:${IMAGE_TAG}
 
 
-
-                echo "Waiting for application startup"
 
                 sleep 20
 
@@ -194,13 +193,11 @@ pipeline {
                 docker logs --tail 50 springboot-app
 
 
-
                 '''
 
             }
 
         }
-
 
 
     }
@@ -212,22 +209,16 @@ pipeline {
 
         success {
 
-            echo "================================="
-            echo "CI/CD Pipeline Successful 🚀"
-            echo "================================="
+            echo "CI/CD Pipeline Completed Successfully 🚀"
 
         }
-
 
 
         failure {
 
-            echo "================================="
             echo "CI/CD Pipeline Failed ❌"
-            echo "================================="
 
         }
-
 
 
         always {
@@ -239,4 +230,3 @@ pipeline {
     }
 
 }
-```
