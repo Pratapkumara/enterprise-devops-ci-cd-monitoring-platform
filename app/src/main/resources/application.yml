@@ -1,21 +1,29 @@
+```yaml
 spring:
   application:
     name: devops-monitoring-app
 
+
 server:
   port: 8080
 
+
+
 management:
+
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
 
+
   endpoint:
     health:
       show-details: always
 
-  prometheus:
-    metrics:
-      export:
+
+  metrics:
+    export:
+      prometheus:
         enabled: true
+```
