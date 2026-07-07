@@ -1,11 +1,9 @@
-```xml
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -14,25 +12,19 @@
         <relativePath/>
     </parent>
 
-
     <groupId>com.devops</groupId>
     <artifactId>app</artifactId>
     <version>1.0.0</version>
-
     <packaging>jar</packaging>
-
 
     <name>devops-monitoring-app</name>
     <description>Spring Boot DevOps CI/CD Monitoring Application</description>
-
 
     <properties>
         <java.version>21</java.version>
     </properties>
 
-
     <dependencies>
-
 
         <!-- Spring Boot REST API -->
         <dependency>
@@ -40,7 +32,17 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Spring Boot Actuator -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
 
+        <!-- Prometheus Metrics -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
 
         <!-- Tomcat Security Fix -->
         <dependency>
@@ -61,24 +63,6 @@
             <version>10.1.55</version>
         </dependency>
 
-
-
-        <!-- Spring Boot Actuator -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-
-
-        <!-- Prometheus Metrics Exporter -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
-
-
-
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -86,13 +70,9 @@
             <scope>test</scope>
         </dependency>
 
-
     </dependencies>
 
-
-
     <build>
-
         <plugins>
 
             <plugin>
@@ -101,9 +81,6 @@
             </plugin>
 
         </plugins>
-
     </build>
 
-
 </project>
-```
