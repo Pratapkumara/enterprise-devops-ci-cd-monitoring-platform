@@ -149,7 +149,7 @@ pipeline {
 
                 echo "Checking container..."
 
-                sleep 10
+                sleep 30
 
                 docker ps | grep springboot-app
 
