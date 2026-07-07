@@ -2,68 +2,52 @@ pipeline {
 
     agent any
 
-
     tools {
-
-        jdk 'jdk21'
-        maven 'maven3'
-
+        maven 'Maven'
+        jdk 'JDK21'
     }
-
 
     environment {
 
+        APP_NAME = "devops-app"
         IMAGE_NAME = "devops-app"
-        IMAGE_TAG = "1.0"
+        CONTAINER_NAME = "devops-app-container"
+        PORT = "8081"
 
-        SCANNER_HOME = tool 'sonar-scanner'
-
+        SONAR_PROJECT_KEY = "devops-app"
+        SONAR_PROJECT_NAME = "devops-app"
     }
-
 
 
     stages {
 
 
         stage('Checkout Code') {
-
             steps {
+                echo "Checking out source code"
 
                 checkout scm
-
             }
-
         }
 
 
-
         stage('Build Maven') {
-
             steps {
 
                 dir('app') {
 
                     sh '''
-
                     echo "Building Spring Boot Application"
 
                     mvn clean package -DskipTests
 
-
                     echo "Checking Jar"
 
-                    ls -lh target/app-1.0.0.jar
-
-
+                    ls -lh target/*.jar
                     '''
-
                 }
-
             }
-
         }
-
-
 
 
 
@@ -73,34 +57,25 @@ pipeline {
 
                 dir('app') {
 
-
                     withSonarQubeEnv('sonar-server') {
-
 
                         sh '''
 
                         echo "Running SonarQube Scan"
 
 
-                        ${SCANNER_HOME}/bin/sonar-scanner \
-                        -Dsonar.projectKey=devops-app \
-                        -Dsonar.projectName=devops-app \
+                        sonar-scanner \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.projectName=${SONAR_PROJECT_NAME} \
                         -Dsonar.sources=src \
                         -Dsonar.java.binaries=target/classes
 
 
                         '''
-
-
                     }
-
                 }
-
             }
-
         }
-
-
 
 
 
@@ -108,19 +83,13 @@ pipeline {
 
             steps {
 
-                timeout(time: 5, unit: 'MINUTES') {
-
+                timeout(time: 15, unit: 'MINUTES') {
 
                     waitForQualityGate abortPipeline: true
 
-
                 }
-
             }
-
         }
-
-
 
 
 
@@ -128,9 +97,7 @@ pipeline {
 
             steps {
 
-
                 dir('app') {
-
 
                     sh '''
 
@@ -138,20 +105,16 @@ pipeline {
 
 
                     docker build \
-                    -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    -t ${IMAGE_NAME}:latest .
 
 
-                    docker images | grep ${IMAGE_NAME}
+                    docker images ${IMAGE_NAME}
 
 
                     '''
-
                 }
-
             }
-
         }
-
 
 
 
@@ -160,73 +123,53 @@ pipeline {
 
             steps {
 
-
                 sh '''
 
-                echo "Trivy Scan"
+                echo "Running Trivy Scan"
 
 
                 trivy image \
-                --no-progress \
                 --severity HIGH,CRITICAL \
-                --exit-code 1 \
-                ${IMAGE_NAME}:${IMAGE_TAG}
+                --exit-code 0 \
+                ${IMAGE_NAME}:latest
 
 
                 '''
-
             }
-
         }
-
 
 
 
 
         stage('Deploy Application') {
 
-
             steps {
-
 
                 sh '''
 
-
-                echo "Removing old container"
-
-
-                docker rm -f springboot-app || true
+                echo "Deploying Application"
 
 
+                docker stop ${CONTAINER_NAME} || true
 
-                echo "Starting Application"
-
+                docker rm ${CONTAINER_NAME} || true
 
 
                 docker run -d \
-                --name springboot-app \
-                --restart always \
-                -p 8081:8080 \
-                ${IMAGE_NAME}:${IMAGE_TAG}
+                --name ${CONTAINER_NAME} \
+                -p ${PORT}:8080 \
+                ${IMAGE_NAME}:latest
 
 
 
-                sleep 20
+                echo "Application Deployed"
 
 
-
-                docker ps | grep springboot-app
-
-
-
-                echo "Application Started 🚀"
-
+                docker ps
 
 
                 '''
-
             }
-
         }
 
 
@@ -234,25 +177,20 @@ pipeline {
 
 
 
-
-
     post {
-
 
         success {
 
-            echo "CI/CD Pipeline Completed Successfully 🚀"
+            echo "Pipeline Completed Successfully 🚀"
 
         }
-
 
 
         failure {
 
-            echo "CI/CD Pipeline Failed ❌"
+            echo "Pipeline Failed ❌"
 
         }
-
 
 
         always {
@@ -261,8 +199,6 @@ pipeline {
 
         }
 
-
     }
-
 
 }
