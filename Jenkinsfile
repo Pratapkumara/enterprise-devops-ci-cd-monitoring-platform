@@ -2,12 +2,10 @@ pipeline {
 
     agent any
 
-
     tools {
         maven 'maven3'
         jdk 'JDK21'
     }
-
 
     environment {
 
@@ -16,59 +14,40 @@ pipeline {
 
         CONTAINER_NAME = "devops-app-container"
 
+        PORT = "8081"
+
         SONAR_PROJECT_KEY = "devops-app"
         SONAR_PROJECT_NAME = "devops-app"
 
-        PORT = "8081"
-
         SCANNER_HOME = tool 'sonar-scanner'
+        SONAR_HOST_URL = "http://sonarqube:9000"
     }
-
-
 
     stages {
 
-
         stage('Checkout Code') {
-
             steps {
-
                 echo "Checking out source code"
-
                 checkout scm
-
             }
         }
 
-
-
-
         stage('Build Maven') {
-
             steps {
-
                 dir('app') {
 
                     sh '''
+                        echo "Building Spring Boot Application"
 
-                    echo "Building Spring Boot Application"
+                        mvn clean package -DskipTests
 
-                    mvn clean package -DskipTests
+                        echo "Checking Jar"
 
-
-                    echo "Checking Jar"
-
-                    ls -lh target/*.jar
-
-
+                        ls -lh target/*.jar
                     '''
                 }
             }
         }
-
-
-
-
 
         stage('SonarQube Analysis') {
 
@@ -78,28 +57,27 @@ pipeline {
 
                     withSonarQubeEnv('sonar-server') {
 
-
                         sh '''
+                            echo "Running SonarQube Scan"
 
-                        echo "Running SonarQube Scan"
+                            ${SCANNER_HOME}/bin/sonar-scanner \
+                            -Dsonar.host.url=${SONAR_HOST_URL} \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                            -Dsonar.sources=src \
+                            -Dsonar.java.binaries=target/classes \
+                            -Dsonar.working.directory=.scannerwork
 
+                            echo "Checking Sonar report"
 
-                        ${SCANNER_HOME}/bin/sonar-scanner \
-                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                        -Dsonar.projectName=${SONAR_PROJECT_NAME} \
-                        -Dsonar.sources=src \
-                        -Dsonar.java.binaries=target/classes
+                            find . -name report-task.txt || true
 
-
+                            cat .scannerwork/report-task.txt || true
                         '''
                     }
                 }
             }
         }
-
-
-
-
 
         stage('Quality Gate') {
 
@@ -113,11 +91,6 @@ pipeline {
             }
         }
 
-
-
-
-
-
         stage('Docker Build') {
 
             steps {
@@ -125,170 +98,93 @@ pipeline {
                 dir('app') {
 
                     sh '''
+                        echo "Building Docker Image"
 
-                    echo "Building Docker Image"
+                        docker build \
+                        -t ${IMAGE_NAME}:${IMAGE_TAG} .
 
-
-                    docker build \
-                    -t ${IMAGE_NAME}:${IMAGE_TAG} .
-
-
-                    docker images ${IMAGE_NAME}
-
-
+                        docker images ${IMAGE_NAME}
                     '''
                 }
             }
         }
 
-
-
-
-
-
-
         stage('Docker Push') {
-
 
             steps {
 
-
                 withCredentials([
-
                     usernamePassword(
                         credentialsId: 'dockerhub-creds',
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )
-
                 ]) {
 
-
                     sh '''
+                        echo "Docker Login"
 
-                    echo "Login Docker Hub"
+                        echo "$DOCKER_PASS" | docker login \
+                        -u "$DOCKER_USER" \
+                        --password-stdin
 
+                        echo "Pushing Docker Image"
 
-                    echo $DOCKER_PASS | docker login \
-                    -u $DOCKER_USER \
-                    --password-stdin
-
-
-
-                    echo "Pushing Image"
-
-
-                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
-
-
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
                     '''
-
                 }
-
             }
         }
-
-
-
-
-
-
 
         stage('Trivy Security Scan') {
 
-
             steps {
 
-
                 sh '''
+                    echo "Running Trivy Scan"
 
-                echo "Running Trivy Scan"
-
-
-                trivy image \
-                --severity HIGH,CRITICAL \
-                --exit-code 0 \
-                ${IMAGE_NAME}:${IMAGE_TAG}
-
-
+                    trivy image \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 0 \
+                    ${IMAGE_NAME}:${IMAGE_TAG}
                 '''
-
             }
         }
-
-
-
-
-
-
 
         stage('Deploy Application') {
 
-
             steps {
 
-
                 sh '''
+                    echo "Deploying Application"
 
-                echo "Deploying Application"
+                    docker stop ${CONTAINER_NAME} || true
 
+                    docker rm ${CONTAINER_NAME} || true
 
-                docker stop ${CONTAINER_NAME} || true
+                    docker run -d \
+                    --name ${CONTAINER_NAME} \
+                    -p ${PORT}:8080 \
+                    ${IMAGE_NAME}:${IMAGE_TAG}
 
-
-                docker rm ${CONTAINER_NAME} || true
-
-
-
-                docker run -d \
-                --name ${CONTAINER_NAME} \
-                -p ${PORT}:8080 \
-                ${IMAGE_NAME}:${IMAGE_TAG}
-
-
-
-                echo "Application Running"
-
-
-                docker ps
-
-
+                    docker ps
                 '''
-
             }
         }
-
-
     }
-
-
-
-
 
     post {
 
-
         success {
-
             echo "🚀 CI/CD Pipeline Completed Successfully"
-
         }
-
 
         failure {
-
             echo "❌ Pipeline Failed"
-
         }
-
 
         always {
-
             cleanWs()
-
         }
-
-
     }
-
 }
