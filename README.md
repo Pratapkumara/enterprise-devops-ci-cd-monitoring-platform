@@ -250,11 +250,19 @@ The pipeline performs:
 Add screenshots of:
 
 - Jenkins Dashboard
+- 
 - Successful Pipeline
+- 
 - SonarQube Dashboard
+- <img width="959" height="479" alt="image" src="https://github.com/user-attachments/assets/35b85f48-5933-4d69-b6b5-690e674f82b9" />
+
 - Docker Hub Repository
+- <img width="959" height="421" alt="image" src="https://github.com/user-attachments/assets/3e2a2b7f-5478-4064-88d7-dcd35d830373" />
+
 - Grafana Dashboard
+- 
 - Prometheus Targets
+- 
 - Running Application
 
 ---
