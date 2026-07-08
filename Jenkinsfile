@@ -3,8 +3,8 @@ pipeline {
     agent any
 
     tools {
+        jdk 'jdk21'
         maven 'maven3'
-        jdk 'JDK21'
     }
 
     options {
@@ -16,39 +16,40 @@ pipeline {
     environment {
 
         IMAGE_NAME = "pratapkumar1/devops-app"
-        IMAGE_TAG = "1.2"
+        IMAGE_TAG = "${BUILD_NUMBER}"
 
         CONTAINER_NAME = "devops-app-container"
 
-        // 8081 Nginx use kar raha hai
         PORT = "8082"
 
         SONAR_PROJECT_KEY = "devops-app"
         SONAR_PROJECT_NAME = "devops-app"
 
         SCANNER_HOME = tool 'sonar-scanner'
-        SONAR_HOST_URL = "http://sonarqube:9000"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                echo "Checking out source code"
+                echo "Checking out source code..."
                 checkout scm
             }
         }
 
-        stage('Build Maven') {
+        stage('Build') {
             steps {
+
                 dir('app') {
+
                     sh '''
-                        echo "Building Spring Boot Application"
+                        echo "Cleaning project..."
+                        mvn clean
 
-                        mvn clean package -DskipTests
+                        echo "Building application..."
+                        mvn package -DskipTests
 
-                        echo "Checking Generated JAR"
-
+                        echo "Generated JAR"
                         ls -lh target/*.jar
                     '''
                 }
@@ -56,21 +57,19 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
+
             steps {
+
                 dir('app') {
-                    withSonarQubeEnv('sonar-server') {
+
+                    withSonarQubeEnv('sonarqube') {
 
                         sh '''
-                            echo "Running SonarQube Scan"
-
                             ${SCANNER_HOME}/bin/sonar-scanner \
-                              -Dsonar.host.url=${SONAR_HOST_URL} \
-                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                              -Dsonar.projectName=${SONAR_PROJECT_NAME} \
-                              -Dsonar.sources=src \
-                              -Dsonar.java.binaries=target/classes
-
-                            echo "Sonar Scan Completed"
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                            -Dsonar.sources=src \
+                            -Dsonar.java.binaries=target/classes
                         '''
                     }
                 }
@@ -78,34 +77,52 @@ pipeline {
         }
 
         stage('Quality Gate') {
+
             steps {
+
                 timeout(time: 15, unit: 'MINUTES') {
+
                     waitForQualityGate abortPipeline: true
                 }
             }
         }
 
         stage('Docker Build') {
+
             steps {
+
                 dir('app') {
+
                     sh '''
-                        echo "Building Docker Image"
-
                         docker build \
-                        -t ${IMAGE_NAME}:${IMAGE_TAG} .
-
-                        docker images | grep ${IMAGE_NAME}
+                        -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                        -t ${IMAGE_NAME}:latest .
                     '''
                 }
             }
         }
 
+        stage('Trivy Scan') {
+
+            steps {
+
+                sh '''
+                    trivy image \
+                    --severity HIGH,CRITICAL \
+                    --no-progress \
+                    --exit-code 0 \
+                    ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
         stage('Docker Push') {
+
             steps {
 
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'dockerhub-creds',
+                        credentialsId: 'dockerhub',
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )
@@ -117,6 +134,7 @@ pipeline {
                         --password-stdin
 
                         docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_NAME}:latest
 
                         docker logout
                     '''
@@ -124,41 +142,21 @@ pipeline {
             }
         }
 
-        stage('Trivy Security Scan') {
-            steps {
-
-                sh '''
-                    echo "Running Trivy Scan"
-
-                    trivy image \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 0 \
-                      --no-progress \
-                      ${IMAGE_NAME}:${IMAGE_TAG}
-                '''
-            }
-        }
-
-        stage('Deploy Application') {
+        stage('Deploy') {
 
             steps {
 
                 sh '''
-                    echo "Deploying Application"
-
                     docker stop ${CONTAINER_NAME} || true
-
                     docker rm ${CONTAINER_NAME} || true
 
                     docker pull ${IMAGE_NAME}:${IMAGE_TAG}
 
                     docker run -d \
-                      --name ${CONTAINER_NAME} \
-                      --restart unless-stopped \
-                      -p ${PORT}:8080 \
-                      ${IMAGE_NAME}:${IMAGE_TAG}
-
-                    echo "Waiting for application..."
+                    --name ${CONTAINER_NAME} \
+                    --restart unless-stopped \
+                    -p ${PORT}:8080 \
+                    ${IMAGE_NAME}:${IMAGE_TAG}
 
                     sleep 20
 
@@ -168,26 +166,30 @@ pipeline {
                 '''
             }
         }
+
     }
 
     post {
 
         success {
-            echo "========================================="
-            echo " CI/CD Pipeline Completed Successfully "
-            echo " Application URL:"
-            echo " http://<EC2-PUBLIC-IP>:8082"
-            echo "========================================="
+
+            echo "=========================================="
+            echo "Pipeline Completed Successfully"
+            echo "Application Running On:"
+            echo "http://15.207.71.93:8082"
+            echo "=========================================="
         }
 
         failure {
-            echo "========================================="
-            echo " Pipeline Failed"
+
+            echo "=========================================="
+            echo "Pipeline Failed"
             echo "Check Console Output"
-            echo "========================================="
+            echo "=========================================="
         }
 
         always {
+
             cleanWs()
         }
     }
