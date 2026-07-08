@@ -14,13 +14,16 @@ alerting:
             - "alertmanager:9093"
 
 
+
 scrape_configs:
 
-  # Prometheus itself
+
+  # Prometheus Self Monitoring
   - job_name: "prometheus"
     static_configs:
       - targets:
-          - "localhost:9090"
+          - "prometheus:9090"
+
 
 
   # Spring Boot Application
@@ -29,26 +32,41 @@ scrape_configs:
     scrape_interval: 15s
     static_configs:
       - targets:
-          - "43.204.220.244:8081"
+          - "springboot-app:8080"
 
 
-  # Jenkins Metrics (if Jenkins exporter is running)
+
+  # Jenkins Metrics
+  # Requires Jenkins Prometheus plugin
   - job_name: "jenkins"
     metrics_path: "/prometheus"
+    scrape_interval: 15s
     static_configs:
       - targets:
-          - "43.204.220.244:8080"
+          - "jenkins:8080"
 
 
-  # Node Exporter for EC2 server monitoring
+
+  # Node Exporter - EC2 Server Monitoring
   - job_name: "node-exporter"
+    scrape_interval: 15s
     static_configs:
       - targets:
-          - "43.204.220.244:9100"
+          - "node-exporter:9100"
 
 
-  # Docker container monitoring (cAdvisor)
+
+  # cAdvisor - Docker Container Monitoring
   - job_name: "cadvisor"
+    scrape_interval: 15s
     static_configs:
       - targets:
-          - "43.204.220.244:8082"
+          - "cadvisor:8080"
+
+
+
+  # Alertmanager Monitoring
+  - job_name: "alertmanager"
+    static_configs:
+      - targets:
+          - "alertmanager:9093"
